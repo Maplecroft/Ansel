@@ -67,7 +67,7 @@ def snap():
         # If cookies are required for the outgoing request, they must be set
         # accordingly in the request headers with the provided name.
         headers = {
-            'Cookie': '%s=%s' % (cookie_name, request.cookies.get(cookie_name))
+            'Cookie': str('%s=%s' % (cookie_name, request.cookies.get(cookie_name))),
         }
 
     ghost = Ghost(viewport_size=(width, height))
