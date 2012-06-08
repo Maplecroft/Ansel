@@ -91,6 +91,8 @@ def snap():
             return response
     except:
         abort(500)
+    finally:
+        del ghost
 
 
 @app.errorhandler(400)
