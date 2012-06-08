@@ -79,8 +79,15 @@ def snap():
         if loaded:
             ghost.wait_for_selector('%s' % loaded)
 
-        for hide in hides:
-            ghost.evaluate(r"$('%s').hide();" % hide)
+        hide_js = r'''
+            if (jQuery) {
+                $(document).ready(function() {
+                    %s
+                });
+            }
+        ''' % '\n'.join([r"$('%s').hide();" % hide for hide in hides])
+
+        ghost.evaluate(hide_js)
 
         handle, file_path = mkstemp(prefix='map_image', suffix='.png')
         ghost.capture_to(file_path, selector=selector)
