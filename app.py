@@ -1,10 +1,13 @@
 #!/usr/bin/env python 
 # -*- coding: iso-8859-15 -*-
-from ghost import Ghost
-from tempfile import mkstemp
+
+from ctypes import c_char_p, c_int
+from multiprocessing import Pipe, Process, Value
 from unidecode import unidecode
 
 from flask import Flask, abort, make_response, request
+
+import utils
 
 app = Flask(__name__)
 DEBUG = True
@@ -51,7 +54,7 @@ def snap():
     name = request.args.get('name', 'page')
     url = request.args.get('url')
     selector = request.args.get('selector', 'body')
-    hides = request.args.get('hides', '').split(',')
+    hides = request.args.get('hides', '')
     loaded = request.args.get('loaded', 'body')
     cookie_name = request.args.get('cookie_name')
     width = request.args.get('width', 1280)
@@ -62,35 +65,35 @@ def snap():
     
     name = unidecode(name).replace(' ', '_')
 
-    headers = {}
-    if cookie_name:
-        # If cookies are required for the outgoing request, they must be set
-        # accordingly in the request headers with the provided name.
-        headers = {
-            'Cookie': str('%s=%s' % (cookie_name, request.cookies.get(cookie_name))),
-        }
-
-    ghost = Ghost(viewport_size=(width, height))
-    ghost.wait_timeout = 20
-
     try:
-        ghost.open(url, headers=headers)
+        url = Value(c_char_p, url)
+        cookie_name = Value(c_char_p, cookie_name)
+        cookie_value = Value(c_char_p, request.cookies.get(cookie_name))
+        loaded = Value(c_char_p, loaded)
+        selector = Value(c_char_p, selector)
+        hides = Value(c_char_p, hides)
+        width = Value(c_int, width)
+        height = Value(c_int, height)
 
-        if loaded:
-            ghost.wait_for_selector('%s' % loaded)
+        parent_conn, child_conn = Pipe()
+        proc = Process(
+            target=utils.snap,
+            args=(
+                child_conn,
+                url,
+                cookie_name,
+                cookie_value,
+                width,
+                height,
+                loaded,
+                hides,
+                selector,
+            ),
+        )
+        proc.start()
+        proc.join()
 
-        hide_js = r'''
-            if (jQuery) {
-                $(document).ready(function() {
-                    %s
-                });
-            }
-        ''' % '\n'.join([r"$('%s').hide();" % hide for hide in hides])
-
-        ghost.evaluate(hide_js)
-
-        handle, file_path = mkstemp(prefix='map_image', suffix='.png')
-        ghost.capture_to(file_path, selector=selector)
+        file_path = parent_conn.recv()
 
         with open(file_path) as f:
             response = make_response(f.read())
@@ -98,8 +101,6 @@ def snap():
             return response
     except:
         abort(500)
-    finally:
-        del ghost
 
 
 @app.errorhandler(400)
