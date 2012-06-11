@@ -67,8 +67,8 @@ def snap():
 
     try:
         url = Value(c_char_p, url)
-        cookie_name = Value(c_char_p, cookie_name)
         cookie_value = Value(c_char_p, request.cookies.get(cookie_name))
+        cookie_name = Value(c_char_p, cookie_name)
         loaded = Value(c_char_p, loaded)
         selector = Value(c_char_p, selector)
         hides = Value(c_char_p, hides)
