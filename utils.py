@@ -14,7 +14,7 @@ def snap(conn, url, cookie_name, cookie_value, width, height, loaded, hides, sel
     ghost = None
     try:
         ghost = Ghost(viewport_size=(width.value, height.value))
-        ghost.wait_timeout = 20
+        ghost.wait_timeout = 30
 
         headers = {
             'Cookie': str('%s=%s' % (cookie_name.value, cookie_value.value)),
@@ -23,7 +23,10 @@ def snap(conn, url, cookie_name, cookie_value, width, height, loaded, hides, sel
         ghost.open(url.value, headers=headers)
 
         if loaded:
-            ghost.wait_for_selector('%s' % loaded.value)
+            try:
+                ghost.wait_for_selector('%s' % loaded.value)
+            except:
+                pass
 
         hide_js = r'''
             if (jQuery) {
