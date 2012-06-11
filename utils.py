@@ -24,21 +24,22 @@ def snap(conn, url, cookie_name, cookie_value, width, height, loaded, hides, sel
 
         ghost.open(url.value, headers=headers)
 
-        if loaded:
+        if loaded.value:
             try:
                 ghost.wait_for_selector('%s' % loaded.value)
             except:
                 pass
 
-        hide_js = r'''
-            if (jQuery) {
-                $(document).ready(function() {
-                    %s
-                });
-            }
-        ''' % '\n'.join([r"$('%s').hide();" % hide for hide in hides.value.split(',')])
-
-        ghost.evaluate(hide_js)
+        selectors = hides.value.split(',')
+        if len(selectors):
+            hide_js = r'''
+                if (jQuery) {
+                    $(document).ready(function() {
+                        %s
+                    });
+                }
+            ''' % '\n'.join([r"$('%s').hide();" % sel for sel in selectors])
+            ghost.evaluate(hide_js)
 
         handle, file_path = mkstemp(prefix='map_image', suffix='.png')
         ghost.capture_to(file_path, selector=selector.value)
