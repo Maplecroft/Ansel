@@ -14,11 +14,13 @@ def snap(conn, url, cookie_name, cookie_value, width, height, loaded, hides, sel
     ghost = None
     try:
         ghost = Ghost(viewport_size=(width.value, height.value))
-        ghost.wait_timeout = 30
+        ghost.wait_timeout = 20
 
-        headers = {
-            'Cookie': str('%s=%s' % (cookie_name.value, cookie_value.value)),
-        }
+        headers = {}
+        if cookie_name.value and cookie_value.value:
+            headers = {
+                'Cookie': str('%s=%s' % (cookie_name.value, cookie_value.value)),
+            }
 
         ghost.open(url.value, headers=headers)
 
