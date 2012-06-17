@@ -28,6 +28,7 @@ def snap(conn, url, cookie_name, cookie_value, width, height, loaded, hides, sel
             try:
                 ghost.wait_for_selector('%s' % loaded.value)
             except:
+                # if the selector never appears, we don't care
                 pass
 
         selectors = hides.value.split(',')
