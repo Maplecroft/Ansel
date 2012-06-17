@@ -41,7 +41,7 @@ def snap(conn, url, cookie_name, cookie_value, width, height, loaded, hides, sel
             ''' % '\n'.join([r"$('%s').hide();" % sel for sel in selectors])
             ghost.evaluate(hide_js)
 
-        handle, file_path = mkstemp(prefix='map_image', suffix='.png')
+        handle, file_path = mkstemp(prefix='ansel_snap', suffix='.png')
         ghost.capture_to(file_path, selector=selector.value)
 
         conn.send(file_path)
