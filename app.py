@@ -1,11 +1,13 @@
 #!/usr/bin/env python 
 # -*- coding: iso-8859-15 -*-
-
+import os
+import tempfile
+import subprocess
 from ctypes import c_char_p, c_int
 from multiprocessing import Pipe, Process, Value
 from unidecode import unidecode
 
-from flask import Flask, abort, make_response, request
+from flask import Flask, abort, make_response, request, Response
 
 import utils
 
@@ -116,6 +118,78 @@ def server_error(error):
     resp.headers['Content-Type'] = 'text/plain'
     return resp
 
+@app.route('/export_svg', methods=['POST'])
+def export_svg():
+    """Provides an svg recieved as a POST request as a downloadable
+       image or pdf file.
+
+       POST parameters are accepted::
+
+            `svg`: the SVG graphic string
+            `filename`: the name of the file to return to the client
+            `bg`: the background colour of the export specified as r.g.b.a values (0-255)
+            `type`: the type of export e.g: image/png, image/jpeg or application/pdf
+    """
+
+    export_type = request.form.get('type')
+    svg = request.form.get('svg', "")
+    filename = request.form.get('filename', 'export')
+    background = request.form.get('bg', '255.255.255.255')
+    batik_path = 'org.apache.batik.apps.rasterizer.Main'
+
+    if "<!ENTITY" in svg:
+        return Response("Execution is topped, the posted SVG could "
+                            "contain code for a malicious attack", 500)
+
+    # allow no other than predefined types
+    type_string = ""
+    ext = "svg"
+    if export_type == 'image/png':
+        type_string = '-m image/png'
+        ext = 'png'
+    elif export_type == 'image/jpeg':
+        type_string = "-m image/jpeg"
+        ext = 'jpg'
+    elif export_type == 'application/pdf':
+        type_string = 'application/pdf'
+        ext = 'pdf'
+
+    if not type_string:
+        return Response("Invalid export type", 500)
+
+    width = ""
+    if request.form.get('width'):
+        width = "-w %s" % request.form.get('width')
+
+    # Write the SVG to file
+    temp_svg = tempfile.NamedTemporaryFile(suffix=".svg")
+
+    tsvg = open(temp_svg.name, 'w')
+    tsvg.write(svg)
+    tsvg.close()
+
+    # Create output path
+    out_file = tempfile.NamedTemporaryFile(suffix="." + ext)
+
+    cmd = "java %s %s -d %s %s %s -bg %s"  % (
+        batik_path,
+        type_string,
+        out_file.name,
+        width,
+        temp_svg.name,
+        background,
+    )
+
+    proc = subprocess.Popen(cmd, shell=True)
+    proc.wait()
+    if proc.returncode != 0:
+        return Response("Error: Export to %s failed" % export_type, 500)
+
+    response = Response(file(out_file.name), direct_passthrough=True)
+    response.headers['Content-Length'] = os.path.getsize(out_file.name)
+    response.headers['Content-Type'] = export_type
+    response.headers['Content-Disposition'] = 'attachment; filename=%s.%s' % (filename, ext)
+    return response
 
 if __name__ == '__main__':
     app.debug = DEBUG
