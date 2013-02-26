@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
 import os
 import tempfile
@@ -64,7 +64,7 @@ def snap():
 
     if not url:
         abort(400)
-    
+
     name = unidecode(name).replace(' ', '_')
 
     try:
@@ -105,34 +105,22 @@ def snap():
         abort(500)
 
 
-@app.errorhandler(400)
-def bad_request(error):
-    resp = make_response('bad request', 400)
-    resp.headers['Content-Type'] = 'text/plain'
-    return resp
-
-
-@app.errorhandler(500)
-def server_error(error):
-    resp = make_response('server error', 500)
-    resp.headers['Content-Type'] = 'text/plain'
-    return resp
-
 @app.route('/export_svg', methods=['POST'])
 def export_svg():
-    """Provides an svg recieved as a POST request as a downloadable
-       image or pdf file.
+    """Export POSTed SVG data as an image or pdf file.
 
-       POST parameters are accepted::
+    POST parameters are accepted::
 
-            `svg`: the SVG graphic string
-            `filename`: the name of the file to return to the client
-            `bg`: the background colour of the export specified as r.g.b.a values (0-255)
-            `type`: the type of export e.g: image/png, image/jpeg or application/pdf
+        `svg`: the SVG graphic string
+        `filename`: the name of the file to return to the client
+        `bg`: the background colour of the export specified as r.g.b.a values
+        `type`: the type of export: image/png, image/jpeg or application/pdf
+        `dpi`: the resolution of the output in dots per inch (default 96)
     """
 
     export_type = request.form.get('type')
     svg = request.form.get('svg', "")
+    dpi = request.form.get('dpi', "96")
     filename = request.form.get('filename', 'export')
     background = request.form.get('bg', '255.255.255.255')
     batik_path = 'org.apache.batik.apps.rasterizer.Main'
@@ -171,13 +159,14 @@ def export_svg():
     # Create output path
     out_file = tempfile.NamedTemporaryFile(suffix="." + ext)
 
-    cmd = "java %s %s -d %s %s %s -bg %s"  % (
+    cmd = "java %s %s -d %s %s %s -bg %s -dpi %s" % (
         batik_path,
         type_string,
         out_file.name,
         width,
         temp_svg.name,
         background,
+        dpi,
     )
 
     proc = subprocess.Popen(cmd, shell=True)
@@ -188,8 +177,25 @@ def export_svg():
     response = Response(file(out_file.name), direct_passthrough=True)
     response.headers['Content-Length'] = os.path.getsize(out_file.name)
     response.headers['Content-Type'] = export_type
-    response.headers['Content-Disposition'] = 'attachment; filename=%s.%s' % (filename, ext)
+    response.headers['Content-Disposition'] = (
+        'attachment; filename=%s.%s' % (filename, ext)
+    )
     return response
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    resp = make_response('bad request', 400)
+    resp.headers['Content-Type'] = 'text/plain'
+    return resp
+
+
+@app.errorhandler(500)
+def server_error(error):
+    resp = make_response('server error', 500)
+    resp.headers['Content-Type'] = 'text/plain'
+    return resp
+
 
 if __name__ == '__main__':
     app.debug = DEBUG
