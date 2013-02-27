@@ -121,7 +121,7 @@ def export_svg():
     export_type = request.form.get('type')
     svg = request.form.get('svg', "")
     dpi = request.form.get('dpi', "96")
-    filename = request.form.get('filename', 'export')
+    fname = request.form.get('filename', 'export')
     background = request.form.get('bg', '255.255.255.255')
     batik_path = 'org.apache.batik.apps.rasterizer.Main'
 
@@ -133,10 +133,10 @@ def export_svg():
     type_string = ""
     ext = "svg"
     if export_type == 'image/png':
-        type_string = '-m image/png'
+        type_string = 'image/png'
         ext = 'png'
     elif export_type == 'image/jpeg':
-        type_string = "-m image/jpeg"
+        type_string = "image/jpeg"
         ext = 'jpg'
     elif export_type == 'application/pdf':
         type_string = 'application/pdf'
@@ -159,14 +159,14 @@ def export_svg():
     # Create output path
     out_file = tempfile.NamedTemporaryFile(suffix="." + ext)
 
-    cmd = "java %s %s -d %s %s %s -bg %s -dpi %s" % (
+    cmd = "java %s -m %s -d %s %s -bg %s -dpi %s %s" % (
         batik_path,
         type_string,
         out_file.name,
         width,
-        temp_svg.name,
         background,
         dpi,
+        temp_svg.name,
     )
 
     proc = subprocess.Popen(cmd, shell=True)
@@ -174,12 +174,13 @@ def export_svg():
     if proc.returncode != 0:
         return Response("Error: Export to %s failed" % export_type, 500)
 
+    if not fname.endswith('.%s' % ext):
+        fname = '%s.%s' % (fname, ext)
+
     response = Response(file(out_file.name), direct_passthrough=True)
     response.headers['Content-Length'] = os.path.getsize(out_file.name)
     response.headers['Content-Type'] = export_type
-    response.headers['Content-Disposition'] = (
-        'attachment; filename=%s.%s' % (filename, ext)
-    )
+    response.headers['Content-Disposition'] = 'attachment; filename=%s' % fname
     return response
 
 
