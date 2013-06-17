@@ -141,6 +141,9 @@ def export_svg():
     elif export_type == 'application/pdf':
         type_string = 'application/pdf'
         ext = 'pdf'
+    elif export_type == 'image/svg+xml':
+        type_string = 'image/svg'
+        ext = 'svg'
 
     if not type_string:
         return Response("Invalid export type", 500)
