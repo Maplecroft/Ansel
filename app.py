@@ -7,6 +7,13 @@ from ctypes import c_char_p, c_int
 from multiprocessing import Pipe, Process, Value
 from unidecode import unidecode
 
+try:
+    import local_settings as settings
+    print 'Using local_settings'
+except ImportError:
+    import default_settings as settings
+    print 'Using default_settings'
+
 from flask import Flask, abort, make_response, request, Response
 
 import utils
@@ -123,7 +130,6 @@ def export_svg():
     dpi = request.form.get('dpi', "96")
     fname = request.form.get('filename', 'export')
     background = request.form.get('bg', '255.255.255.255')
-    batik_path = 'org.apache.batik.apps.rasterizer.Main'
 
     if "<!ENTITY" in svg:
         return Response("Execution is topped, the posted SVG could "
@@ -162,8 +168,8 @@ def export_svg():
     # Create output path
     out_file = tempfile.NamedTemporaryFile(suffix="." + ext)
 
-    cmd = "java %s -m %s -d %s %s -bg %s -dpi %s %s" % (
-        batik_path,
+    cmd = settings.java_cmd_format % (
+        settings.batik_path,
         type_string,
         out_file.name,
         width,
