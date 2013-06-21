@@ -9,10 +9,8 @@ from unidecode import unidecode
 
 try:
     import local_settings as settings
-    print 'Using local_settings'
 except ImportError:
     import default_settings as settings
-    print 'Using default_settings'
 
 from flask import Flask, abort, make_response, request, Response
 
@@ -136,22 +134,20 @@ def export_svg():
                             "contain code for a malicious attack", 500)
 
     # allow no other than predefined types
-    type_string = ""
+    type_option = ""
     ext = "svg"
     if export_type == 'image/png':
-        type_string = 'image/png'
+        type_option = '-m image/png'
         ext = 'png'
     elif export_type == 'image/jpeg':
-        type_string = "image/jpeg"
+        type_option = '-m image/jpeg'
         ext = 'jpg'
     elif export_type == 'application/pdf':
-        type_string = 'application/pdf'
+        type_option = '-m application/pdf'
         ext = 'pdf'
     elif export_type == 'image/svg+xml':
-        type_string = 'image/svg'
         ext = 'svg'
-
-    if not type_string:
+    else:
         return Response("Invalid export type", 500)
 
     width = ""
@@ -165,23 +161,27 @@ def export_svg():
     tsvg.write(svg)
     tsvg.close()
 
-    # Create output path
-    out_file = tempfile.NamedTemporaryFile(suffix="." + ext)
+    if ext == 'svg':
+        # Use the original svg file.
+        out_file = temp_svg
+    else:
+        # Create output path
+        out_file = tempfile.NamedTemporaryFile(suffix="." + ext)
 
-    cmd = settings.java_cmd_format % (
-        settings.batik_path,
-        type_string,
-        out_file.name,
-        width,
-        background,
-        dpi,
-        temp_svg.name,
-    )
+        cmd = settings.java_cmd_format.format(
+            batik_path=settings.batik_path,
+            type_option=type_option,
+            out_filename=out_file.name,
+            width_option=width,
+            background=background,
+            dpi=dpi,
+            temp_svg_name=temp_svg.name,
+        )
 
-    proc = subprocess.Popen(cmd, shell=True)
-    proc.wait()
-    if proc.returncode != 0:
-        return Response("Error: Export to %s failed" % export_type, 500)
+        proc = subprocess.Popen(cmd, shell=True)
+        proc.wait()
+        if proc.returncode != 0:
+            return Response("Error: Export to %s failed" % export_type, 500)
 
     if not fname.endswith('.%s' % ext):
         fname = '%s.%s' % (fname, ext)
