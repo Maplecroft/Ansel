@@ -149,7 +149,7 @@ def export_svg():
         return Response("Invalid export type", 500)
 
     width = ""
-    if request.form.get('width'):
+    if request.form.get('width') and request.form.get('width') != u"0":
         width = "-w %s" % request.form.get('width')
 
     # Write the SVG to file
