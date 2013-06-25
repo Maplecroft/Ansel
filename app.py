@@ -167,7 +167,6 @@ def export_svg():
     else:
         # Create output path
         out_file = tempfile.NamedTemporaryFile(suffix="." + ext)
-        output = open('/tmp/ansel_out.log', 'wb')
 
         cmd = settings.java_cmd_format.format(
             batik_path=settings.batik_path,
@@ -178,9 +177,8 @@ def export_svg():
             dpi=dpi,
             temp_svg_name=temp_svg.name,
         )
-        output.write('\n\n%s\n\n' % cmd)
 
-        proc = subprocess.Popen(cmd, shell=True, stdout=output, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(cmd, shell=True)
         proc.wait()
         if proc.returncode != 0:
             return Response("Error: Export to %s failed" % export_type, 500)
