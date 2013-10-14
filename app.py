@@ -158,7 +158,7 @@ def export_svg():
     temp_svg = tempfile.NamedTemporaryFile(suffix=".svg")
 
     tsvg = open(temp_svg.name, 'w')
-    tsvg.write(svg)
+    tsvg.write(svg.encode("utf-8"))
     tsvg.close()
 
     if ext == 'svg':
